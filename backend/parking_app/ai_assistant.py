@@ -137,6 +137,34 @@ class ParkingQueryAssistant:
             status='active'
         ).first()
         
+        # Try Gemini AI FIRST for all substantive questions
+        gemini = GeminiParkingAssistant()
+        if gemini.is_available and len(query_text) > 10:  # Only use Gemini for longer/detailed questions
+            try:
+                # Build context for Gemini
+                context = {}
+                if current_assignment:
+                    context['current_assignment'] = {
+                        'slot_number': current_assignment.parking_slot.slot_number,
+                        'slot_type': current_assignment.parking_slot.slot_type,
+                    }
+                    context['distance'] = current_assignment.distance_to_building
+                
+                # If user has subscription, add it
+                if hasattr(user, 'subscription') and user.subscription:
+                    context['subscription'] = user.subscription.subscription_type
+                
+                response = gemini.generate_response(query_text, context)
+                if response:
+                    return {
+                        'query_type': 'ai_response',
+                        'response': response,
+                        'powered_by': 'Gemini AI'
+                    }
+            except Exception as e:
+                logger.error(f"Gemini error: {str(e)}")
+                # Fall through to keyword matching
+        
         # Handle simple greetings
         if any(word in query_lower for word in ['hello', 'hi ', 'hi,', 'hey', 'greetings', 'good morning', 'good afternoon', 'good evening']):
             return {
@@ -166,34 +194,6 @@ class ParkingQueryAssistant:
                 'powered_by': 'Keyword Match'
             }
         
-        # Try Gemini AI for detailed questions
-        gemini = GeminiParkingAssistant()
-        if gemini.is_available:
-            try:
-                # Build context for Gemini
-                context = {}
-                if current_assignment:
-                    context['current_assignment'] = {
-                        'slot_number': current_assignment.parking_slot.slot_number,
-                        'slot_type': current_assignment.parking_slot.slot_type,
-                    }
-                    context['distance'] = current_assignment.distance_to_building
-                
-                # If user has subscription, add it
-                if hasattr(user, 'subscription') and user.subscription:
-                    context['subscription'] = user.subscription.subscription_type
-                
-                response = gemini.generate_response(query_text, context)
-                if response:
-                    return {
-                        'query_type': 'ai_response',
-                        'response': response,
-                        'powered_by': 'Gemini AI'
-                    }
-            except Exception as e:
-                logger.error(f"Gemini error: {str(e)}")
-                # Fall through to keyword matching
-        
         # Keyword-based fallbacks for parking-specific questions
         if any(word in query_lower for word in ['why', 'reason', 'assigned', 'explanation']):
             if current_assignment:
@@ -216,6 +216,30 @@ class ParkingQueryAssistant:
                     'alternatives': alternatives,
                     'powered_by': 'System'
                 }
+        
+        # If we have Gemini but question was too short, try it anyway for context
+        if gemini.is_available:
+            try:
+                context = {}
+                if current_assignment:
+                    context['current_assignment'] = {
+                        'slot_number': current_assignment.parking_slot.slot_number,
+                        'slot_type': current_assignment.parking_slot.slot_type,
+                    }
+                    context['distance'] = current_assignment.distance_to_building
+                
+                if hasattr(user, 'subscription') and user.subscription:
+                    context['subscription'] = user.subscription.subscription_type
+                
+                response = gemini.generate_response(query_text, context)
+                if response:
+                    return {
+                        'query_type': 'ai_response',
+                        'response': response,
+                        'powered_by': 'Gemini AI'
+                    }
+            except Exception as e:
+                logger.error(f"Gemini fallback error: {str(e)}")
         
         # Default response
         return {

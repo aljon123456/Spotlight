@@ -13,7 +13,7 @@ GEMINI_API_KEY = getattr(settings, 'GEMINI_API_KEY', None)
 
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    MODEL = "gemini-pro"
+    MODEL = "gemini-2.5-flash"  # Latest stable model available
 else:
     MODEL = None
     logger.warning("GEMINI_API_KEY not configured. Gemini features will be disabled.")
