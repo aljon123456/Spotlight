@@ -21,6 +21,7 @@ import PaymentCancelPage from './pages/PaymentCancelPage';
 // Components
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+import AIAssistant from './components/AIAssistant';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -65,6 +66,7 @@ function App() {
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className="app">
         {user && window.location.pathname !== '/login' && window.location.pathname !== '/register' && <Navbar user={user} />}
+        {user && <AIAssistant />}
         <ToastContainer position="bottom-right" autoClose={3000} />
         
         <Routes>

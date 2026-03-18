@@ -8,6 +8,7 @@ from .views import (
     CampusViewSet, BuildingViewSet, ParkingLotViewSet, ParkingSlotViewSet,
     ScheduleViewSet, AssignmentViewSet, NotificationViewSet, AssignmentHistoryViewSet
 )
+from .ai_assistant import ParkingAssistantViewSet
 
 router = DefaultRouter()
 router.register(r'campus', CampusViewSet, basename='campus')
@@ -18,6 +19,7 @@ router.register(r'schedules', ScheduleViewSet, basename='schedule')
 router.register(r'assignments', AssignmentViewSet, basename='assignment')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'assignment-history', AssignmentHistoryViewSet, basename='assignment-history')
+router.register(r'ai-assistant', ParkingAssistantViewSet, basename='ai-assistant')
 
 urlpatterns = [
     path('', include(router.urls)),
