@@ -199,6 +199,10 @@ AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
 
+# Google Gemini AI Configuration
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+# Get your API key from: https://aistudio.google.com/app/apikey
+
 # Logging Configuration
 LOGGING = {
     'version': 1,

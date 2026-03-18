@@ -8,30 +8,48 @@ const AIAssistant = () => {
   const [loading, setLoading] = useState(false);
   const [assignment, setAssignment] = useState(null);
   const [showExplanation, setShowExplanation] = useState(false);
+  const [loadingAssignment, setLoadingAssignment] = useState(false);
+  const [assignmentError, setAssignmentError] = useState(null);
 
   // Load current assignment explanation on mount
   useEffect(() => {
-    if (isOpen && !assignment) {
+    if (isOpen && !assignment && !loadingAssignment) {
       loadAssignmentExplanation();
     }
-  }, [isOpen]);
+  }, [isOpen, assignment, loadingAssignment]);
 
   const loadAssignmentExplanation = async () => {
+    setLoadingAssignment(true);
+    setAssignmentError(null);
     try {
       const token = localStorage.getItem('access_token');
       const response = await fetch('http://localhost:8000/api/ai-assistant/my_assignment/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
+      
+      if (!response.ok) {
+        throw new Error('No active assignment found');
+      }
+      
       const data = await response.json();
       setAssignment(data);
       
       // Add initial message
-      setMessages([{
-        type: 'assistant',
-        content: `You are currently assigned to parking slot ${data.parking_slot.slot_number}. ${data.summary}`
-      }]);
+      if (data && data.parking_slot && data.parking_slot.slot_number) {
+        setMessages([{
+          type: 'assistant',
+          content: `You are currently assigned to parking slot ${data.parking_slot.slot_number}. ${data.summary || ''}`
+        }]);
+      }
     } catch (error) {
       console.error('Failed to load assignment:', error);
+      setAssignmentError('No active parking assignment found.');
+      setMessages([{
+        type: 'assistant',
+        content: 'I can help answer questions about parking! However, you don\'t currently have an active assignment.'
+      }]);
+    } finally {
+      setLoadingAssignment(false);
     }
   };
 
@@ -91,19 +109,30 @@ const AIAssistant = () => {
             <button className="close-btn" onClick={() => setIsOpen(false)}>✕</button>
           </div>
 
+          {/* Loading State */}
+          {loadingAssignment && (
+            <div className="loading-state">
+              <p>Loading your assignment...</p>
+            </div>
+          )}
+
           {/* Assignment Info */}
-          {assignment && !showExplanation && (
+          {!loadingAssignment && assignment && !showExplanation && (
             <div className="assignment-summary">
               <h4>Current Assignment</h4>
-              <p><strong>Slot:</strong> {assignment.parking_slot.slot_number} ({assignment.parking_slot.slot_type})</p>
-              <p><strong>Distance:</strong> {assignment.assignment_factors.distance_to_building}</p>
-              <p><strong>Confidence:</strong> {assignment.assignment_factors.confidence_score}%</p>
-              <button 
-                className="expand-btn"
-                onClick={() => setShowExplanation(true)}
-              >
-                See Full Explanation
-              </button>
+              {assignment.parking_slot && (
+                <>
+                  <p><strong>Slot:</strong> {assignment.parking_slot.slot_number} ({assignment.parking_slot.slot_type})</p>
+                  <p><strong>Distance:</strong> {assignment.assignment_factors?.distance_to_building || 'N/A'}</p>
+                  <p><strong>Confidence:</strong> {assignment.assignment_factors?.confidence_score || 'N/A'}%</p>
+                  <button 
+                    className="expand-btn"
+                    onClick={() => setShowExplanation(true)}
+                  >
+                    See Full Explanation
+                  </button>
+                </>
+              )}
             </div>
           )}
 
@@ -117,28 +146,32 @@ const AIAssistant = () => {
                 ← Back to Chat
               </button>
               
-              <h4>{assignment.summary}</h4>
+              {assignment.summary && <h4>{assignment.summary}</h4>}
               
               <div className="explanation-details">
-                <div className="detail-section">
-                  <h5>Parking Slot Details</h5>
-                  <ul>
-                    <li>Slot Number: {assignment.parking_slot.slot_number}</li>
-                    <li>Type: {assignment.parking_slot.slot_type}</li>
-                    <li>Building: {assignment.parking_slot.building}</li>
-                    <li>Status: {assignment.parking_slot.status}</li>
-                  </ul>
-                </div>
+                {assignment.parking_slot && (
+                  <div className="detail-section">
+                    <h5>Parking Slot Details</h5>
+                    <ul>
+                      <li>Slot Number: {assignment.parking_slot.slot_number}</li>
+                      <li>Type: {assignment.parking_slot.slot_type}</li>
+                      <li>Building: {assignment.parking_slot.building}</li>
+                      <li>Status: {assignment.parking_slot.status}</li>
+                    </ul>
+                  </div>
+                )}
 
-                <div className="detail-section">
-                  <h5>Why This Slot</h5>
-                  <ul>
-                    <li>{assignment.assignment_factors.slot_type_priority}</li>
-                    <li>Distance: {assignment.assignment_factors.distance_to_building}</li>
-                    <li>Availability: {assignment.assignment_factors.availability_status}</li>
-                    <li>Confidence Score: {assignment.assignment_factors.confidence_score}%</li>
-                  </ul>
-                </div>
+                {assignment.assignment_factors && (
+                  <div className="detail-section">
+                    <h5>Why This Slot</h5>
+                    <ul>
+                      <li>{assignment.assignment_factors.slot_type_priority}</li>
+                      <li>Distance: {assignment.assignment_factors.distance_to_building}</li>
+                      <li>Availability: {assignment.assignment_factors.availability_status}</li>
+                      <li>Confidence Score: {assignment.assignment_factors.confidence_score}%</li>
+                    </ul>
+                  </div>
+                )}
 
                 {assignment.alternatives && assignment.alternatives.length > 0 && (
                   <div className="detail-section">

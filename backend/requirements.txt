@@ -11,6 +11,7 @@ redis==5.0.1
 drf-spectacular==0.26.5
 Pillow==10.1.0
 paypalrestsdk==1.7.1
+google-generativeai==0.3.1
 
 # Production Server & Database
 gunicorn==21.2.0
