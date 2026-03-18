@@ -18,7 +18,10 @@ from .algorithms.graph_algorithms import GraphEngine
 from .algorithms.optimization import OptimizationUtilities, ComplexityAnalysis
 import math
 import random
+import logging
 from functools import lru_cache
+
+logger = logging.getLogger(__name__)
 
 
 class ParkingAssignmentEngine:
@@ -63,6 +66,30 @@ class ParkingAssignmentEngine:
             Assignment object if successful, None otherwise
         """
         
+        # Check subscription tier and enforce max active reservations
+        from users_app.models import Subscription
+        max_active = 1  # Default for basic users
+        
+        try:
+            user_subscription = Subscription.objects.get(user=user)
+            if user_subscription.is_active():
+                if user_subscription.subscription_type == 'vip':
+                    max_active = 5
+                elif user_subscription.subscription_type == 'premium':
+                    max_active = 3
+            # else: subscription inactive, fall back to max_active = 1
+        except Subscription.DoesNotExist:
+            # No subscription, max_active = 1
+            pass
+        
+        # Count active assignments for this user
+        active_count = Assignment.objects.filter(user=user, status='active').count()
+        
+        if active_count >= max_active:
+            # User has reached maximum active reservations for their tier
+            logger.warning(f"User {user.email} ({user_subscription.subscription_type if 'user_subscription' in locals() else 'basic'}) has {active_count}/{max_active} active reservations. Assignment denied.")
+            return None
+        
         # Fetch parking lots and available slots
         available_slots = self._get_available_slots(user, schedule)
         
@@ -101,30 +128,46 @@ class ParkingAssignmentEngine:
     def _get_available_slots(self, user, schedule):
         """
         Get available parking slots during the schedule time.
+        Enforces subscription tier restrictions.
         
-        Priority:
-        1. Premium slots for VIP subscribers
-        2. Reserved slots for regular subscribers
-        3. Regular slots for all
+        **Subscription Tier Access Control:**
+        - VIP Tier: Premium + Reserved slots ONLY
+        - Premium Tier: Premium + Regular slots (prioritizes premium)
+        - Basic/No Subscription: Regular slots ONLY
+        
+        This ensures:
+        - VIP users get exclusive premium parking
+        - Premium users get better options than basic users
+        - Basic users get standard slots
         """
         
         # Start with all available slots
         available = ParkingSlot.objects.filter(status='available')
         
-        # Apply slot type preferences based on subscription
-        if hasattr(user, 'subscription') and user.subscription.is_active():
-            if user.subscription.subscription_type == 'vip':
-                # VIP gets premium slots first
-                available = available.filter(
-                    Q(slot_type='premium') | Q(slot_type='reserved')
-                ).order_by('-slot_type')
-            elif user.subscription.subscription_type == 'premium':
-                # Premium subscribers prefer premium slots
-                available = available.filter(
-                    Q(slot_type='premium') | Q(slot_type='regular')
-                ).order_by('-slot_type')
+        # Get user's subscription
+        from users_app.models import Subscription
+        try:
+            user_subscription = Subscription.objects.get(user=user)
+            subscription_type = user_subscription.subscription_type if user_subscription.status == 'active' else 'basic'
+        except Subscription.DoesNotExist:
+            subscription_type = 'basic'
         
-        # Exclude handicap if user doesn't need it
+        # Enforce subscription tier restrictions
+        if subscription_type == 'vip':
+            # VIP users ONLY get premium and reserved slots
+            available = available.filter(
+                Q(slot_type='premium') | Q(slot_type='reserved')
+            ).order_by('-slot_type')
+        elif subscription_type == 'premium':
+            # Premium users get premium and regular slots (premium first)
+            available = available.filter(
+                Q(slot_type='premium') | Q(slot_type='regular')
+            ).order_by('-slot_type')
+        else:
+            # Basic and non-subscribers ONLY get regular slots
+            available = available.filter(slot_type='regular')
+        
+        # Exclude handicap slots if user doesn't need them
         if not self._is_handicap_user(user):
             available = available.exclude(slot_type='handicap')
         
@@ -288,6 +331,23 @@ class ParkingAssignmentEngine:
         
         # Aggregate with weights
         final_score = ScoreAggregator.weighted_average(individual_scores, self.score_weights)
+        
+        # Apply subscription tier bonus for premium slots
+        from users_app.models import Subscription
+        try:
+            user_subscription = Subscription.objects.get(user=user)
+            if user_subscription.is_active():
+                # VIP gets substantial bonus for reserved slots
+                if user_subscription.subscription_type == 'vip' and slot.slot_type == 'reserved':
+                    final_score += 0.2  # +0.2 score boost for VIP reserved slots
+                    logger.debug(f"VIP {user.email} reserved slot bonus applied to {slot}")
+                
+                # Premium users get moderate bonus for premium slots
+                elif user_subscription.subscription_type == 'premium' and slot.slot_type in ['premium', 'reserved']:
+                    final_score += 0.15  # +0.15 score boost for Premium premium slots
+                    logger.debug(f"Premium {user.email} premium slot bonus applied to {slot}")
+        except Subscription.DoesNotExist:
+            pass  # No subscription, no bonus
         
         # Add small randomness for variety (simulated AI)
         final_score += random.uniform(-0.05, 0.05)
