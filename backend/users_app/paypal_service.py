@@ -3,12 +3,15 @@ PayPal payment processing service.
 Handles payment creation, verification, and subscription management.
 """
 import paypalrestsdk
+import logging
 from decimal import Decimal
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from .models import User, Subscription
 from .payment_models import Payment, PaymentPackage
+
+logger = logging.getLogger(__name__)
 
 
 class PayPalService:
@@ -21,6 +24,7 @@ class PayPalService:
             "client_id": settings.PAYPAL_CLIENT_ID,
             "client_secret": settings.PAYPAL_CLIENT_SECRET,
         })
+        logger.info(f"PayPal Service initialized in {settings.PAYPAL_MODE} mode")
     
     def create_payment(self, user, subscription_type, duration_months=1):
         """
@@ -87,6 +91,8 @@ class PayPalService:
                     status='pending'
                 )
                 
+                logger.info(f"PayPal payment created: {payment.id} for user {user.email}")
+                
                 # Get approval URL
                 for link in payment.links:
                     if link.rel == "approval_url":
@@ -97,9 +103,11 @@ class PayPalService:
                             'approval_url': link.href
                         }
             else:
+                error_msg = payment.error.get('message', str(payment.error)) if hasattr(payment, 'error') else 'Unknown error'
+                logger.error(f"PayPal payment creation failed: {error_msg}")
                 return {
                     'success': False,
-                    'error': payment.error['message']
+                    'error': error_msg
                 }
         except PaymentPackage.DoesNotExist:
             return {
@@ -125,9 +133,19 @@ class PayPalService:
             dict with success status
         """
         try:
+            logger.info(f"Executing PayPal payment: {paypal_payment_id}")
             payment = paypalrestsdk.Payment.find(paypal_payment_id)
             
+            if not payment:
+                logger.error(f"PayPal payment not found: {paypal_payment_id}")
+                return {
+                    'success': False,
+                    'error': 'Payment not found on PayPal'
+                }
+            
             if payment.execute({"payer_id": payer_id}):
+                logger.info(f"PayPal payment executed successfully: {paypal_payment_id}")
+                
                 # Payment successful - update database
                 db_payment = Payment.objects.get(id=payment_id)
                 db_payment.status = 'completed'
@@ -148,29 +166,36 @@ class PayPalService:
                     }
                 )
                 
+                logger.info(f"Subscription created for user {db_payment.user.email}: {subscription.subscription_type}")
+                
                 return {
                     'success': True,
                     'message': 'Payment successful',
                     'subscription_type': db_payment.subscription_type
                 }
             else:
+                error_msg = payment.error.get('message', str(payment.error)) if hasattr(payment, 'error') else 'Unknown error'
+                logger.error(f"PayPal payment execution failed: {error_msg}")
+                
                 db_payment = Payment.objects.get(id=payment_id)
                 db_payment.status = 'failed'
                 db_payment.save()
                 
                 return {
                     'success': False,
-                    'error': payment.error['message']
+                    'error': error_msg
                 }
         except Payment.DoesNotExist:
+            logger.error(f"Database payment record not found: {payment_id}")
             return {
                 'success': False,
-                'error': 'Payment record not found'
+                'error': 'Payment record not found in database'
             }
         except Exception as e:
+            logger.exception(f"PayPal execution error: {str(e)}")
             return {
                 'success': False,
-                'error': str(e)
+                'error': f"Payment processing error: {str(e)}"
             }
     
     def cancel_payment(self, payment_id):

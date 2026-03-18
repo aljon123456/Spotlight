@@ -27,6 +27,8 @@ function PaymentSuccessPage({ setUser }) {
 
   const executePayment = async (paypalPaymentId, payerId, paymentId) => {
     try {
+      console.log('Executing payment with:', { paypalPaymentId, payerId, paymentId });
+      
       const response = await fetch('http://localhost:8000/api/payments/execute/', {
         method: 'POST',
         headers: {
@@ -40,9 +42,11 @@ function PaymentSuccessPage({ setUser }) {
         })
       });
 
+      console.log('Execute response status:', response.status);
       const data = await response.json();
+      console.log('Execute response data:', data);
 
-      if (data.success) {
+      if (data.success || response.ok) {
         // Clear pending payment
         localStorage.removeItem('pending_payment_id');
         
@@ -64,12 +68,19 @@ function PaymentSuccessPage({ setUser }) {
           navigate('/dashboard');
         }, 3000);
       } else {
-        toast.error(data.error || 'Payment failed');
+        const errorMsg = data.error || data.message || 'Payment failed for unknown reason';
+        console.error('Payment execution error:', errorMsg);
+        toast.error(errorMsg);
         setLoading(false);
+        
+        // Redirect to subscription page to retry
+        setTimeout(() => {
+          navigate('/subscription');
+        }, 3000);
       }
     } catch (error) {
-      console.error(error);
-      toast.error('Error processing payment');
+      console.error('Payment fetch error:', error);
+      toast.error('Error processing payment: ' + error.message);
       setLoading(false);
     }
   };

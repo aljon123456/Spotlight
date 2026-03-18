@@ -83,10 +83,14 @@ class PaymentExecuteView(generics.CreateAPIView):
         )
         
         if result['success']:
-            return Response(result, status=status.HTTP_200_OK)
+            return Response({
+                'success': True,
+                'message': result.get('message'),
+                'subscription_type': result.get('subscription_type')
+            }, status=status.HTTP_200_OK)
         else:
             return Response(
-                {'error': result['error']},
+                {'success': False, 'error': result.get('error', 'Payment execution failed')},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
