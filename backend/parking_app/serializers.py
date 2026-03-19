@@ -55,18 +55,26 @@ class ScheduleSerializer(serializers.ModelSerializer):
     """Serializer for Schedule model."""
     building_name = serializers.CharField(source='building.name', read_only=True, allow_null=True)
     is_active = serializers.SerializerMethodField()
+    schedule_document_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Schedule
         fields = (
             'id', 'user', 'schedule_type', 'title', 'building', 'building_name',
-            'start_time', 'end_time', 'days_of_week', 'start_date', 'end_date', 'is_active', 'created_at'
+            'start_time', 'end_time', 'days_of_week', 'start_date', 'end_date',
+            'schedule_document', 'schedule_document_url', 'is_active', 'created_at'
         )
-        read_only_fields = ('id', 'created_at', 'building_name', 'user', 'is_active')
+        read_only_fields = ('id', 'created_at', 'building_name', 'user', 'is_active', 'schedule_document_url')
     
     def get_is_active(self, obj):
         """Check if schedule is currently active."""
         return obj.is_active()
+    
+    def get_schedule_document_url(self, obj):
+        """Get URL for schedule document."""
+        if obj.schedule_document:
+            return obj.schedule_document.url
+        return None
 
 
 class AssignmentSerializer(serializers.ModelSerializer):

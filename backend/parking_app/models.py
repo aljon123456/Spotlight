@@ -155,6 +155,14 @@ class Schedule(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     
+    # Document upload for schedule verification
+    schedule_document = models.FileField(
+        upload_to='documents/',
+        blank=True,
+        null=True,
+        help_text="Upload syllabus, schedule, or verification document (PDF, max 5MB)"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

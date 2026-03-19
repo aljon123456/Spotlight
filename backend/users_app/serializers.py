@@ -95,15 +95,60 @@ class LoginSerializer(serializers.Serializer):
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for user profile update with full user data."""
-    profile_picture = serializers.ImageField(required=False, allow_null=True)
+    profile_picture_url = serializers.SerializerMethodField()
     
     class Meta:
         model = User
         fields = (
             'id', 'username', 'first_name', 'last_name', 'email', 'phone_number',
-            'vehicle_plate', 'vehicle_type', 'profile_picture', 'user_type'
+            'vehicle_plate', 'vehicle_type', 'profile_picture', 'profile_picture_url', 'user_type'
         )
-        read_only_fields = ('id', 'username', 'user_type')
+        read_only_fields = ('id', 'username', 'user_type', 'profile_picture_url')
+    
+    def get_profile_picture_url(self, obj):
+        """Generate pre-signed URL for profile picture."""
+        if not obj.profile_picture:
+            return None
+        
+        try:
+            import boto3
+            from django.conf import settings
+            
+            if not settings.AWS_ACCESS_KEY_ID or not settings.AWS_SECRET_ACCESS_KEY:
+                return obj.profile_picture.url
+            
+            s3_client = boto3.client(
+                's3',
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                region_name=settings.AWS_S3_REGION_NAME
+            )
+            
+            # Generate pre-signed URL
+            s3_key = str(obj.profile_picture)
+            url = s3_client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': settings.AWS_STORAGE_BUCKET_NAME,
+                    'Key': s3_key
+                },
+                ExpiresIn=86400  # 24 hours
+            )
+            
+            # If CloudFront domain is configured, replace S3 domain with CloudFront domain
+            if hasattr(settings, 'AWS_CLOUDFRONT_DOMAIN') and settings.AWS_CLOUDFRONT_DOMAIN:
+                # Try both formats (with and without region)
+                s3_domain_with_region = f'{settings.AWS_STORAGE_BUCKET_NAME}.s3.{settings.AWS_S3_REGION_NAME}.amazonaws.com'
+                s3_domain_without_region = f'{settings.AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+                if s3_domain_with_region in url:
+                    url = url.replace(s3_domain_with_region, settings.AWS_CLOUDFRONT_DOMAIN)
+                elif s3_domain_without_region in url:
+                    url = url.replace(s3_domain_without_region, settings.AWS_CLOUDFRONT_DOMAIN)
+            
+            return url
+        except Exception as e:
+            # Fallback to regular URL
+            return obj.profile_picture.url
     
     def update(self, instance, validated_data):
         """Update user profile with file handling."""

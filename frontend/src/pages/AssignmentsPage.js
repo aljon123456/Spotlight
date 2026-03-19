@@ -53,8 +53,8 @@ function AssignmentsPage() {
             <div key={assignment.id} className="card">
               <div className="assignment-header">
                 <div>
-                  <h3>Slot {assignment.parking_slot_info.slot_number}</h3>
-                  <p className="assignment-lot">{assignment.parking_slot_info.lot_name}</p>
+                  <h3>Slot {assignment.parking_slot_info?.slot_number || 'N/A'}</h3>
+                  <p className="assignment-lot">{assignment.parking_slot_info?.lot_name || 'N/A'}</p>
                 </div>
                 <span className={`badge ${getStatusBadgeClass(assignment.status)}`}>
                   {assignment.status}
@@ -64,19 +64,19 @@ function AssignmentsPage() {
               <div className="assignment-details">
                 <div className="detail-row">
                   <strong>Type:</strong>
-                  <span>{assignment.parking_slot_info.slot_type}</span>
+                  <span>{assignment.parking_slot_info?.slot_type || 'N/A'}</span>
                 </div>
                 <div className="detail-row">
                   <strong>Duration:</strong>
                   <span>
-                    {new Date(assignment.start_datetime).toLocaleDateString()} {' '}
-                    {new Date(assignment.start_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} to{' '}
-                    {new Date(assignment.end_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {assignment?.start_datetime ? new Date(assignment.start_datetime).toLocaleDateString() : 'N/A'} {' '}
+                    {assignment?.start_datetime ? new Date(assignment.start_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''} to{' '}
+                    {assignment?.end_datetime ? new Date(assignment.end_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                   </span>
                 </div>
                 <div className="detail-row">
                   <strong>Distance:</strong>
-                  <span>{Math.round(assignment.distance_to_building)}m away</span>
+                  <span>{assignment?.distance_to_building ? Math.round(assignment.distance_to_building) : 'N/A'}m away</span>
                 </div>
                 <div className="detail-row">
                   <strong>AI Score:</strong>
@@ -84,10 +84,10 @@ function AssignmentsPage() {
                     <div className="confidence-bar">
                       <div
                         className="confidence-fill"
-                        style={{ width: `${assignment.ai_confidence_score * 100}%` }}
+                        style={{ width: `${assignment?.ai_confidence_score ? assignment.ai_confidence_score * 100 : 0}%` }}
                       />
                     </div>
-                    {Math.round(assignment.ai_confidence_score * 100)}%
+                    {assignment?.ai_confidence_score ? Math.round(assignment.ai_confidence_score * 100) : 0}%
                   </span>
                 </div>
               </div>

@@ -173,8 +173,8 @@ function ProfilePage({ user, setUser }) {
             <div className="profile-picture-preview">
               {previewImage ? (
                 <img src={previewImage} alt="Preview" />
-              ) : user?.profile_picture ? (
-                <img src={user.profile_picture} alt="Profile" />
+              ) : user?.profile_picture_url ? (
+                <img src={user.profile_picture_url} alt="Profile" />
               ) : (
                 <div className="placeholder">No image</div>
               )}

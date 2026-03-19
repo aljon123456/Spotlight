@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_spectacular',
+    'storages',
     
     # Local apps
     'users_app',
@@ -193,11 +194,33 @@ AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
 AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
 AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='spotlight-parking')
 AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
-AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+
+# CloudFront CDN Configuration
+AWS_CLOUDFRONT_DOMAIN = config('AWS_CLOUDFRONT_DOMAIN', default='')  # Set to CloudFront domain when available
+AWS_S3_CUSTOM_DOMAIN = AWS_CLOUDFRONT_DOMAIN if AWS_CLOUDFRONT_DOMAIN else f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+
+# S3 Storage Settings
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_QUERYSTRING_AUTH = False  # Allow public URLs without signatures
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None  # Disable ACL since bucket doesn't allow it
+AWS_S3_OBJECT_PARAMETERS = {
+    'CacheControl': 'max-age=86400',  # 24 hour cache
+}
+
+# Use S3 for media storage if AWS credentials are configured
+if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY:
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+    MEDIA_ROOT = 'media/'
+else:
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 # File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880  # 5MB
+ALLOWED_UPLOAD_EXTENSIONS = ['jpg', 'jpeg', 'png', 'pdf', 'mp4', 'mov', 'avi']
 
 # Google Gemini AI Configuration
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')

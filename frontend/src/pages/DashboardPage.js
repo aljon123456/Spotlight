@@ -63,33 +63,33 @@ function DashboardPage({ user }) {
           {/* Current Assignment Card */}
           <div className="card">
             <h2>🅿️ Current Parking Assignment</h2>
-            {currentAssignment ? (
+            {currentAssignment && currentAssignment.parking_slot_info ? (
               <>
                 <div className="assignment-info">
                   <div className="info-row">
                     <strong>Slot:</strong>
-                    <span>{currentAssignment.parking_slot_info.slot_number}</span>
+                    <span>{currentAssignment.parking_slot_info?.slot_number || 'N/A'}</span>
                   </div>
                   <div className="info-row">
                     <strong>Location:</strong>
-                    <span>{currentAssignment.parking_slot_info.lot_name}</span>
+                    <span>{currentAssignment.parking_slot_info?.lot_name || 'N/A'}</span>
                   </div>
                   <div className="info-row">
                     <strong>Type:</strong>
                     <span className="badge badge-info">
-                      {currentAssignment.parking_slot_info.slot_type}
+                      {currentAssignment.parking_slot_info?.slot_type || 'N/A'}
                     </span>
                   </div>
                   <div className="info-row">
                     <strong>Duration:</strong>
                     <span>
-                      {new Date(currentAssignment.start_datetime).toLocaleString()} to{' '}
-                      {new Date(currentAssignment.end_datetime).toLocaleString()}
+                      {currentAssignment?.start_datetime ? new Date(currentAssignment.start_datetime).toLocaleString() : 'N/A'} to{' '}
+                      {currentAssignment?.end_datetime ? new Date(currentAssignment.end_datetime).toLocaleString() : 'N/A'}
                     </span>
                   </div>
                   <div className="info-row">
                     <strong>Distance:</strong>
-                    <span>{Math.round(currentAssignment.distance_to_building)}m</span>
+                    <span>{currentAssignment?.distance_to_building ? Math.round(currentAssignment.distance_to_building) : 'N/A'}m</span>
                   </div>
                   <div className="info-row">
                     <strong>AI Confidence:</strong>
@@ -98,11 +98,11 @@ function DashboardPage({ user }) {
                         <div
                           className="confidence-fill"
                           style={{
-                            width: `${currentAssignment.ai_confidence_score * 100}%`,
+                            width: `${currentAssignment?.ai_confidence_score ? currentAssignment.ai_confidence_score * 100 : 0}%`,
                           }}
                         />
                       </div>
-                      {Math.round(currentAssignment.ai_confidence_score * 100)}%
+                      {currentAssignment?.ai_confidence_score ? Math.round(currentAssignment.ai_confidence_score * 100) : 0}%
                     </span>
                   </div>
                 </div>

@@ -9,6 +9,7 @@ from .views import (
     ScheduleViewSet, AssignmentViewSet, NotificationViewSet, AssignmentHistoryViewSet
 )
 from .ai_assistant import ParkingAssistantViewSet
+from .file_upload_views import FileUploadViewSet
 
 router = DefaultRouter()
 router.register(r'campus', CampusViewSet, basename='campus')
@@ -20,6 +21,7 @@ router.register(r'assignments', AssignmentViewSet, basename='assignment')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'assignment-history', AssignmentHistoryViewSet, basename='assignment-history')
 router.register(r'ai-assistant', ParkingAssistantViewSet, basename='ai-assistant')
+router.register(r'uploads', FileUploadViewSet, basename='file-upload')
 
 urlpatterns = [
     path('', include(router.urls)),

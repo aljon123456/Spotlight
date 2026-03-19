@@ -86,6 +86,7 @@ export const parkingService = {
   },
 
   getAssignmentExplanation: async (assignmentId) => {
+    // Returns detailed explanation for current assignment
     const response = await apiClient.post(`/assignments/${assignmentId}/explain/`);
     return response.data;
   },
