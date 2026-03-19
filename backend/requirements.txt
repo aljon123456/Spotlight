@@ -11,9 +11,8 @@ celery==5.3.4
 redis==5.0.1
 drf-spectacular==0.26.5
 Pillow>=11.0.0
-paypalserver-sdk==1.1.1
+braintree>=4.20.0
 google-generativeai>=0.3.1
-python-braintree==4.23.0
 
 # Production Server & Database
 gunicorn==21.2.0
