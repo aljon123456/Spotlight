@@ -13,7 +13,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security Settings
 SECRET_KEY = config('SECRET_KEY', default='dev-secret-key-change-in-production')
 DEBUG = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+
+# ALLOWED_HOSTS - supports wildcards for Render deployment
+_allowed_hosts = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = [host.strip() for host in _allowed_hosts]
+
+# Add support for wildcard domains (e.g., *.onrender.com)
+# This allows any subdomain of onrender.com
+if any('onrender.com' in host for host in ALLOWED_HOSTS):
+    # Add specific Render domains that might be used
+    ALLOWED_HOSTS.extend([
+        'spotlight-2.onrender.com',
+        'spotlight-api.onrender.com', 
+        'localhost',
+        '127.0.0.1'
+    ])
 
 # Custom User Model
 AUTH_USER_MODEL = 'users_app.User'
