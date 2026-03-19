@@ -2,20 +2,35 @@
 services:
   - type: web
     name: spotlight-backend
-    env: python
+    runtime: python-3.11
     buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput
-    startCommand: gunicorn spotlight_project.wsgi:application
+    startCommand: gunicorn spotlight_project.wsgi:application --bind 0.0.0.0:$PORT
     autoDeploy: true
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: DEBUG
-        value: False
+        value: "False"
       - key: ALLOWED_HOSTS
-        value: spotlight-api.onrender.com
+        value: "*.onrender.com,localhost"
       - key: CORS_ALLOWED_ORIGINS
-        value: https://spotlight-frontend.onrender.com
+        value: "https://*.onrender.com,http://localhost:3000"
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_STORAGE_BUCKET_NAME
+        value: "spotlight-parking"
+      - key: AWS_S3_REGION_NAME
+        value: "ap-southeast-2"
+      - key: AWS_CLOUDFRONT_DOMAIN
+        value: "d1uaqww6pojqcq.cloudfront.net"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: spotlight-db
+          property: connectionString
 
-  - type: pserv
-    name: spotlight-postgres
+databases:
+  - name: spotlight-db
     plan: free
+    ipAllowList: []
